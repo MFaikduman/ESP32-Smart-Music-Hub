@@ -26,6 +26,7 @@ const STORAGE_KEYS = {
 
 const COMMAND_COOLDOWN_MS = 1200;
 const DEFAULT_COVER = "assets/images/default-cover.svg";
+const ASSET_VERSION = "audio-cache-v3";
 
 const audioPlayer = document.getElementById("audioPlayer");
 const coverImage = document.getElementById("coverImage");
@@ -77,7 +78,7 @@ function loadSong(index) {
   currentSongIndex = (index + songs.length) % songs.length;
   const song = songs[currentSongIndex];
 
-  audioPlayer.src = song.src;
+  audioPlayer.src = withAssetVersion(song.src);
   audioPlayer.load();
   coverImage.src = song.cover || DEFAULT_COVER;
   coverImage.alt = `${song.title} albüm kapağı`;
@@ -397,6 +398,11 @@ function formatTime(value) {
   const minutes = Math.floor(value / 60);
   const seconds = Math.floor(value % 60).toString().padStart(2, "0");
   return `${minutes}:${seconds}`;
+}
+
+function withAssetVersion(path) {
+  const separator = path.includes("?") ? "&" : "?";
+  return `${path}${separator}v=${ASSET_VERSION}`;
 }
 
 function renderSongList() {
