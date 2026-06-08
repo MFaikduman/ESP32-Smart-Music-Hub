@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Türkçe sesli komutlarla kontrol edilebilen statik müzik çalar.">
+  <title>Sesli Müzik Kontrol Sistemi</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <main class="app-shell">
+    <section class="player-panel" aria-labelledby="appTitle">
+      <div class="hero-copy">
+        <p class="eyebrow">Adaptif Araç Ses Sistemi</p>
+        <h1 id="appTitle"><span>Sesli Müzik</span><span>Kontrol Sistemi</span></h1>
+      </div>
+
+      <div class="player-layout">
+        <div class="cover-area">
+          <img id="coverImage" class="cover-image" src="assets/images/default-cover.svg" alt="Albüm kapağı">
+          <div id="waveform" class="waveform" aria-hidden="true">
+            <span></span>
+            <span></span>
+            <span></span>
+            <span></span>
+            <span></span>
+          </div>
+        </div>
+
+        <div class="player-details">
+          <div class="track-meta">
+            <p id="songTitle" class="song-title">Şarkı yükleniyor</p>
+            <p id="artistName" class="artist-name">Sanatçı</p>
+            <p id="playStatus" class="status-pill" aria-live="polite">Duraklatıldı</p>
+          </div>
+
+          <div class="progress-block">
+            <div class="time-row">
+              <span id="currentTime">0:00</span>
+              <span id="durationTime">0:00</span>
+            </div>
+            <button id="progressBar" class="progress-bar" type="button" aria-label="Şarkı ilerleme çubuğu">
+              <span id="progressFill" class="progress-fill"></span>
+            </button>
+          </div>
+
+          <div class="controls" aria-label="Müzik kontrolleri">
+            <button id="previousButton" class="icon-button" type="button" aria-label="Önceki şarkı">
+              <span aria-hidden="true">⏮</span>
+            </button>
+            <button id="playButton" class="play-button" type="button" aria-label="Oynat">
+              <span id="playIcon" aria-hidden="true">▶</span>
+            </button>
+            <button id="nextButton" class="icon-button" type="button" aria-label="Sonraki şarkı">
+              <span aria-hidden="true">⏭</span>
+            </button>
+          </div>
+
+          <div class="volume-row">
+            <button id="volumeDownButton" class="icon-button small" type="button" aria-label="Sesi azalt">
+              <span aria-hidden="true">−</span>
+            </button>
+            <label class="volume-label" for="volumeSlider">
+              <span>Ses</span>
+              <strong id="volumeValue">70</strong>
+            </label>
+            <input id="volumeSlider" class="volume-slider" type="range" min="0" max="100" value="70" aria-label="Ses seviyesi">
+            <button id="volumeUpButton" class="icon-button small" type="button" aria-label="Sesi artır">
+              <span aria-hidden="true">+</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <aside class="side-panel" aria-label="Şarkı listesi ve mikrofon">
+      <section class="playlist-section" aria-labelledby="playlistTitle">
+        <div class="section-heading">
+          <h2 id="playlistTitle">Şarkı Listesi</h2>
+        </div>
+        <ul id="songList" class="song-list"></ul>
+      </section>
+
+      <section class="voice-section" aria-labelledby="voiceTitle">
+        <div class="section-heading">
+          <h2 id="voiceTitle">Sesli Kontrol</h2>
+          <span id="microphoneStatus" class="microphone-status">Kapalı</span>
+        </div>
+        <button id="microphoneButton" class="microphone-button" type="button" aria-label="Mikrofonu aç" aria-pressed="false">
+          <span class="microphone-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" role="img" focusable="false">
+              <path d="M12 14a3 3 0 0 0 3-3V6a3 3 0 0 0-6 0v5a3 3 0 0 0 3 3Z"></path>
+              <path d="M18 10v1a6 6 0 0 1-12 0v-1"></path>
+              <path d="M12 17v4"></path>
+              <path d="M8 21h8"></path>
+            </svg>
+          </span>
+          <span id="microphoneButtonText">Mikrofonu Aç</span>
+        </button>
+        <dl class="voice-readout">
+          <div>
+            <dt>Son komut</dt>
+            <dd id="lastCommand">Henüz komut yok</dd>
+          </div>
+          <div>
+            <dt>Bildirim</dt>
+            <dd id="notificationArea" aria-live="polite">Hazır</dd>
+          </div>
+        </dl>
+      </section>
+    </aside>
+  </main>
+
+  <audio id="audioPlayer" preload="metadata"></audio>
+  <script src="script.js"></script>
+</body>
+</html>

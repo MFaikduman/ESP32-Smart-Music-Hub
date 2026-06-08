@@ -1,0 +1,34 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 800" role="img" aria-labelledby="title desc">
+  <title id="title">Varsayılan Albüm Kapağı</title>
+  <desc id="desc">Koyu zemin üzerinde ses dalgası ve nota çizimleri.</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#202326"/>
+      <stop offset="0.55" stop-color="#151718"/>
+      <stop offset="1" stop-color="#2a241c"/>
+    </linearGradient>
+    <linearGradient id="accent" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#4fd1c5"/>
+      <stop offset="1" stop-color="#ffb86b"/>
+    </linearGradient>
+    <filter id="softShadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="24" stdDeviation="28" flood-color="#000000" flood-opacity="0.45"/>
+    </filter>
+  </defs>
+  <rect width="800" height="800" fill="url(#bg)"/>
+  <path d="M0 610C142 556 218 642 340 590C464 537 524 430 800 508V800H0Z" fill="#191b1d" opacity="0.82"/>
+  <circle cx="400" cy="390" r="214" fill="#111314" stroke="#3c4146" stroke-width="10" filter="url(#softShadow)"/>
+  <circle cx="400" cy="390" r="156" fill="none" stroke="#262a2e" stroke-width="20"/>
+  <circle cx="400" cy="390" r="88" fill="none" stroke="#32373c" stroke-width="18"/>
+  <circle cx="400" cy="390" r="38" fill="url(#accent)"/>
+  <path d="M260 480c42-74 78-150 126-238 8-15 32-9 32 8v210c0 31-33 57-75 57-38 0-67-18-67-43 0-24 29-43 67-43 14 0 27 3 39 8V328c-30 57-61 116-95 178-8 14-31 8-27-16Z" fill="url(#accent)" opacity="0.95"/>
+  <g fill="#4fd1c5" opacity="0.72">
+    <rect x="118" y="356" width="18" height="88" rx="9"/>
+    <rect x="154" y="318" width="18" height="164" rx="9"/>
+    <rect x="190" y="382" width="18" height="58" rx="9"/>
+    <rect x="610" y="342" width="18" height="116" rx="9"/>
+    <rect x="646" y="296" width="18" height="208" rx="9"/>
+    <rect x="682" y="374" width="18" height="70" rx="9"/>
+  </g>
+  <text x="400" y="686" text-anchor="middle" fill="#f4f4f1" font-family="Arial, sans-serif" font-size="34" font-weight="700">Sesli Müzik</text>
+</svg>
