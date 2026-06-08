@@ -1,95 +1,57 @@
-# Sesli Müzik Kontrol Sistemi
+# Music Player Interface
 
-Bu proje, GitHub Pages üzerinde tamamen statik olarak çalışan bir müzik kontrol uygulamasıdır. Kullanıcılar şarkıları arayüzdeki butonlarla, klavye kısayollarıyla veya Türkçe sesli komutlarla yönetebilir.
+This repository contains the web-based music player and audio files used by the ESP32 voice control system.
 
-## Dosya Yapısı
+The interface is hosted on GitHub Pages and provides the music library that can be controlled through commands detected by the ESP32.
+
+## Features
+
+* Play and pause music
+* Switch between songs
+* Adjust the volume
+* Display the current song
+* Responsive design
+* GitHub Pages support
+
+## Project Structure
 
 ```text
 /
 ├── index.html
 ├── style.css
 ├── script.js
-├── README.md
 └── assets/
     ├── music/
-    │   ├── Jurrivh - First Love (SlowVerb) [Nza2D_Z1Ono].mp3
-    │   ├── Paul Cardall - Ascensus Christi_ A Piano Rhapsody (Official Video) [LBoQ1W5VWx4].mp3
-    │   └── See You Again - Sad & Emotional Piano Song Instrumental [dz5EVMSdN0w].mp3
+    │   ├── song1.mp3
+    │   ├── song2.mp3
+    │   └── song3.mp3
     └── images/
-        └── default-cover.svg
 ```
 
-MP3 dosyaları `assets/music/` klasörü altında tutulur.
+## Adding Music
 
-## GitHub Pages Üzerinden Yayınlama
+Add MP3 files to the `assets/music` folder and update the song list inside `script.js`.
 
-1. Bu dosyaları bir GitHub deposuna yükleyin.
-2. GitHub deposunda `Settings` bölümüne girin.
-3. `Pages` sekmesini açın.
-4. `Build and deployment` alanında kaynak olarak ilgili branch'i seçin.
-5. Kök dizini yayınlamak için `/root` seçeneğini kullanın.
-6. Kaydettikten sonra GitHub Pages bağlantısının oluşmasını bekleyin.
-
-Uygulama backend, veritabanı, Node.js, npm veya harici API gerektirmez.
-
-## Yeni MP3 Ekleme
-
-1. Yeni MP3 dosyanızı `assets/music/` klasörüne koyun.
-2. Dosya adında boşluk ve Türkçe karakter kullanmamaya özen gösterin.
-3. `script.js` dosyasının başındaki `songs` dizisine yeni şarkıyı ekleyin.
-
-Örnek:
-
-```js
-{
-  title: "Yeni Şarkı",
-  artist: "Yeni Sanatçı",
-  src: "assets/music/yeni-sarki.mp3",
-  cover: "assets/images/default-cover.svg"
-}
+```javascript
+const songs = [
+  {
+    title: "Song Name",
+    artist: "Artist Name",
+    src: "assets/music/song1.mp3"
+  }
+];
 ```
 
-## songs Dizisini Güncelleme
+## Usage
 
-`script.js` dosyasının en üstündeki `songs` dizisi şarkı listesini belirler. Her kayıt için şu alanlar kullanılır:
+The website acts as the music player interface of the ESP32-based voice control system. The ESP32 firmware and voice recognition model are maintained separately.
 
-- `title`: Ekranda görünen şarkı adı
-- `artist`: Sanatçı adı
-- `src`: MP3 dosyasının relative path yolu
-- `cover`: Albüm kapağı yolu
+## Deployment
 
-GitHub Pages alt dizinlerinde de çalışması için yolları `assets/...` biçiminde relative yazın. `/assets/...` gibi kökten başlayan yollar kullanmayın.
+Enable GitHub Pages from:
 
-## Mikrofon İzni
+```text
+Settings -> Pages -> Deploy from a branch
+```
 
-Sesli komutları kullanmak için uygulamadaki `Mikrofonu Aç` düğmesine basın ve tarayıcının mikrofon izni isteğini onaylayın. İzin reddedilirse tarayıcının adres çubuğundaki site ayarlarından mikrofon iznini tekrar açabilirsiniz.
-
-## Sesli Komutlar
-
-- `oynat`: Müziği oynatır.
-- `devam et`: Müziği oynatır.
-- `duraklat`: Müziği duraklatır.
-- `durdur`: Müziği duraklatır.
-- `sonraki`: Sonraki şarkıya geçer.
-- `sonraki şarkı`: Sonraki şarkıya geçer.
-- `önceki`: Önceki şarkıya geçer.
-- `önceki şarkı`: Önceki şarkıya geçer.
-- `ses aç`: Sesi yüzde 10 artırır.
-- `ses yükselt`: Sesi yüzde 10 artırır.
-- `ses kıs`: Sesi yüzde 10 azaltır.
-- `sessiz`: Sesi sıfırlar.
-- `başa sar`: Şarkıyı başa alır.
-
-## Klavye Kontrolleri
-
-- `Space`: Oynat veya duraklat
-- `Sağ ok`: 5 saniye ileri
-- `Sol ok`: 5 saniye geri
-- `Yukarı ok`: Sesi artır
-- `Aşağı ok`: Sesi azalt
-
-## Tarayıcı Desteği
-
-Sesli kontrol tarayıcının Web Speech API özelliğini kullanır. Bu API desteği tarayıcıya ve sürüme göre değişebilir. En iyi sonuç için güncel Google Chrome veya Microsoft Edge kullanmanız önerilir.
-
-MP3 dosyası bulunamazsa veya yüklenemezse uygulama arayüzde hata mesajı gösterir ve çalışmaya devam eder.
+Select the `main` branch and `/root` folder.
