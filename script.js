@@ -2,19 +2,19 @@ const songs = [
   {
     title: "First Love (SlowVerb)",
     artist: "Jurrivh",
-    src: "assets/music/Jurrivh - First Love (SlowVerb) [Nza2D_Z1Ono].mp3",
+    src: "assets/music/song1.mp3",
     cover: "assets/images/default-cover.svg"
   },
   {
     title: "Ascensus Christi: A Piano Rhapsody",
     artist: "Paul Cardall",
-    src: "assets/music/Paul Cardall - Ascensus Christi_ A Piano Rhapsody (Official Video) [LBoQ1W5VWx4].mp3",
+    src: "assets/music/song2.mp3",
     cover: "assets/images/default-cover.svg"
   },
   {
     title: "See You Again",
     artist: "Sad & Emotional Piano Instrumental",
-    src: "assets/music/See You Again - Sad & Emotional Piano Song Instrumental [dz5EVMSdN0w].mp3",
+    src: "assets/music/song3.mp3",
     cover: "assets/images/default-cover.svg"
   }
 ];
