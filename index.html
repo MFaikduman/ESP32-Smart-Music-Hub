@@ -3,11 +3,11 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="description" content="Türkçe sesli komutlarla kontrol edilebilen statik müzik çalar.">
+  <meta name="description" content="ESP32 komutlarıyla kontrol edilebilen statik müzik çalar.">
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="0">
-  <title>Sesli Müzik Kontrol Sistemi</title>
+  <title>Müzik Kontrol Sistemi</title>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -15,7 +15,7 @@
     <section class="player-panel" aria-labelledby="appTitle">
       <div class="hero-copy">
         <p class="eyebrow">Adaptif Araç Ses Sistemi</p>
-        <h1 id="appTitle"><span>Sesli Müzik</span><span>Kontrol Sistemi</span></h1>
+        <h1 id="appTitle"><span>Müzik</span><span>Kontrol Sistemi</span></h1>
       </div>
 
       <div class="player-layout">
@@ -35,6 +35,7 @@
             <p id="songTitle" class="song-title">Şarkı yükleniyor</p>
             <p id="artistName" class="artist-name">Sanatçı</p>
             <p id="playStatus" class="status-pill" aria-live="polite">Duraklatıldı</p>
+            <p id="notificationArea" class="notification-area" aria-live="polite">Hazır</p>
           </div>
 
           <div class="progress-block">
@@ -76,7 +77,7 @@
       </div>
     </section>
 
-    <aside class="side-panel" aria-label="Şarkı listesi ve mikrofon">
+    <aside class="side-panel" aria-label="Şarkı listesi">
       <section class="playlist-section" aria-labelledby="playlistTitle">
         <div class="section-heading">
           <h2 id="playlistTitle">Şarkı Listesi</h2>
@@ -84,37 +85,65 @@
         <ul id="songList" class="song-list"></ul>
       </section>
 
-      <section class="voice-section" aria-labelledby="voiceTitle">
+      <section class="pc-control-section" aria-labelledby="pcControlTitle">
         <div class="section-heading">
-          <h2 id="voiceTitle">Sesli Kontrol</h2>
-          <span id="microphoneStatus" class="microphone-status">Kapalı</span>
+          <h2 id="pcControlTitle">PC Kontrol</h2>
+          <span id="pcStatusBadge" class="connection-status">Servis aranıyor</span>
         </div>
-        <button id="microphoneButton" class="microphone-button" type="button" aria-label="Mikrofonu aç" aria-pressed="false">
-          <span class="microphone-icon" aria-hidden="true">
-            <svg viewBox="0 0 24 24" role="img" focusable="false">
-              <path d="M12 14a3 3 0 0 0 3-3V6a3 3 0 0 0-6 0v5a3 3 0 0 0 3 3Z"></path>
-              <path d="M18 10v1a6 6 0 0 1-12 0v-1"></path>
-              <path d="M12 17v4"></path>
-              <path d="M8 21h8"></path>
-            </svg>
-          </span>
-          <span id="microphoneButtonText">Mikrofonu Aç</span>
-        </button>
-        <dl class="voice-readout">
+
+        <div class="pc-connect-row">
+          <label class="port-field" for="pcPortInput">
+            <span>Port</span>
+            <input id="pcPortInput" type="text" value="COM12" autocomplete="off">
+          </label>
+          <button id="pcConnectButton" class="control-button" type="button">Bağlan</button>
+        </div>
+
+        <div class="pc-command-grid" aria-label="PC komutları">
+          <button class="pc-command-button" type="button" data-pc-command="VOLUME_DOWN" aria-label="Sesi yüzde 20 yap">
+            <span aria-hidden="true">−</span>
+            <small>%20</small>
+          </button>
+          <button class="pc-command-button" type="button" data-pc-command="VOLUME_UP" aria-label="Sesi yüzde 100 yap">
+            <span aria-hidden="true">+</span>
+            <small>%100</small>
+          </button>
+          <button class="pc-command-button" type="button" data-pc-command="MUTE" aria-label="Sessize al veya sesi aç">
+            <span aria-hidden="true">M</span>
+            <small>Sessiz</small>
+          </button>
+          <button class="pc-command-button" type="button" data-pc-command="PREVIOUS" aria-label="Önceki şarkı">
+            <span aria-hidden="true">⏮</span>
+            <small>Önceki</small>
+          </button>
+          <button class="pc-command-button" type="button" data-pc-command="NEXT" aria-label="Sonraki şarkı">
+            <span aria-hidden="true">⏭</span>
+            <small>Sonraki</small>
+          </button>
+        </div>
+
+        <dl class="pc-readout">
           <div>
             <dt>Son komut</dt>
-            <dd id="lastCommand">Henüz komut yok</dd>
+            <dd id="pcLastCommand">Yok</dd>
           </div>
           <div>
-            <dt>Bildirim</dt>
-            <dd id="notificationArea" aria-live="polite">Hazır</dd>
+            <dt>AI tahmini</dt>
+            <dd id="pcLastPrediction">Bekleniyor</dd>
+          </div>
+          <div>
+            <dt>Ses</dt>
+            <dd id="pcVolumeState">%70</dd>
           </div>
         </dl>
+
+        <p id="pcServiceMessage" class="pc-service-message" aria-live="polite">Hazır</p>
+        <div id="pcLog" class="pc-log" aria-live="polite"></div>
       </section>
     </aside>
   </main>
 
   <audio id="audioPlayer" preload="metadata"></audio>
-  <script src="script.js?v=audio-cache-v3"></script>
+  <script src="script.js?v=audio-cache-v5"></script>
 </body>
 </html>

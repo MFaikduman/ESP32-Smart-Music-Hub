@@ -20,13 +20,26 @@ const songs = [
 ];
 
 const STORAGE_KEYS = {
-  selectedSong: "voiceMusicPlayer:selectedSong",
-  volume: "voiceMusicPlayer:volume"
+  selectedSong: "musicPlayer:selectedSong",
+  volume: "musicPlayer:volume"
 };
 
-const COMMAND_COOLDOWN_MS = 1200;
 const DEFAULT_COVER = "assets/images/default-cover.svg";
-const ASSET_VERSION = "audio-cache-v3";
+const ASSET_VERSION = "audio-cache-v5";
+const MEDIA_COMMAND_COOLDOWN_MS = 900;
+const LOW_VOLUME_PERCENT = 20;
+const HIGH_VOLUME_PERCENT = 100;
+const DEFAULT_PC_PORT = "COM12";
+const DEFAULT_PC_BAUD_RATE = 115200;
+const PC_CONTROL_FALLBACK_BASE = "http://127.0.0.1:8765/api/pc-control";
+
+const PC_COMMAND_LABELS = {
+  VOLUME_DOWN: "Ses %20",
+  VOLUME_UP: "Ses %100",
+  MUTE: "Sessiz",
+  NEXT: "Sonraki",
+  PREVIOUS: "Önceki"
+};
 
 const audioPlayer = document.getElementById("audioPlayer");
 const coverImage = document.getElementById("coverImage");
@@ -46,23 +59,31 @@ const volumeUpButton = document.getElementById("volumeUpButton");
 const volumeSlider = document.getElementById("volumeSlider");
 const volumeValue = document.getElementById("volumeValue");
 const songList = document.getElementById("songList");
-const microphoneButton = document.getElementById("microphoneButton");
-const microphoneButtonText = document.getElementById("microphoneButtonText");
-const microphoneStatus = document.getElementById("microphoneStatus");
-const lastCommand = document.getElementById("lastCommand");
 const notificationArea = document.getElementById("notificationArea");
-
-const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+const pcStatusBadge = document.getElementById("pcStatusBadge");
+const pcPortInput = document.getElementById("pcPortInput");
+const pcConnectButton = document.getElementById("pcConnectButton");
+const pcCommandButtons = document.querySelectorAll("[data-pc-command]");
+const pcLastCommand = document.getElementById("pcLastCommand");
+const pcLastPrediction = document.getElementById("pcLastPrediction");
+const pcVolumeState = document.getElementById("pcVolumeState");
+const pcServiceMessage = document.getElementById("pcServiceMessage");
+const pcLog = document.getElementById("pcLog");
 
 let currentSongIndex = getStoredSongIndex();
 let isPlaying = false;
-let recognition = null;
-let isMicrophoneActive = false;
-let isRecognitionRunning = false;
-let restartTimer = null;
-let lastCommandText = "";
-let lastCommandTime = 0;
 let notificationTimer = null;
+let lastMediaCommand = "";
+let lastMediaCommandTime = 0;
+let pcBridgeOnline = false;
+let pcSerialConnected = false;
+let pcApiBase = null;
+let pcEvents = null;
+let pcStatusTimer = null;
+let pcLocalLog = [];
+let hasReceivedPcStatus = false;
+let lastProcessedPcCommandEvent = 0;
+let pcBridgeVolumeLabel = "";
 
 function getStoredSongIndex() {
   const storedIndex = Number.parseInt(localStorage.getItem(STORAGE_KEYS.selectedSong), 10);
@@ -90,6 +111,7 @@ function loadSong(index) {
 
   localStorage.setItem(STORAGE_KEYS.selectedSong, String(currentSongIndex));
   renderSongList();
+  updateMediaSessionMetadata();
 }
 
 function playSong() {
@@ -171,109 +193,36 @@ function setProgress(event) {
   updateProgress();
 }
 
-function changeVolume(value) {
+function changeVolume(value, options = {}) {
   const normalizedValue = Math.min(Math.max(Number(value), 0), 100);
+
+  if (options.unmute) {
+    setAudioMuted(false, { notify: false });
+  }
+
   audioPlayer.volume = normalizedValue / 100;
   volumeSlider.value = String(normalizedValue);
-  volumeValue.textContent = String(normalizedValue);
   localStorage.setItem(STORAGE_KEYS.volume, String(normalizedValue));
+  updateVolumeDisplay();
 }
 
-function startVoiceRecognition() {
-  if (!SpeechRecognition) {
-    setMicrophoneStatus("Desteklenmiyor", "unsupported");
-    showNotification("Bu tarayıcı Web Speech API desteği sunmuyor.", true);
-    return;
-  }
+function setAudioMuted(muted, options = {}) {
+  audioPlayer.muted = muted;
+  updateVolumeDisplay();
 
-  if (!recognition) {
-    setupRecognition();
-  }
-
-  isMicrophoneActive = true;
-  microphoneButton.setAttribute("aria-pressed", "true");
-  microphoneButton.setAttribute("aria-label", "Mikrofonu kapat");
-  microphoneButtonText.textContent = "Mikrofonu Kapat";
-  setMicrophoneStatus("Dinleniyor", "listening");
-  safelyStartRecognition();
-}
-
-function stopVoiceRecognition() {
-  isMicrophoneActive = false;
-  window.clearTimeout(restartTimer);
-  microphoneButton.setAttribute("aria-pressed", "false");
-  microphoneButton.setAttribute("aria-label", "Mikrofonu aç");
-  microphoneButtonText.textContent = "Mikrofonu Aç";
-  setMicrophoneStatus(SpeechRecognition ? "Kapalı" : "Desteklenmiyor", SpeechRecognition ? "closed" : "unsupported");
-
-  if (recognition && isRecognitionRunning) {
-    recognition.stop();
+  if (options.notify !== false) {
+    showNotification(muted ? "Ses kapatıldı" : "Ses açıldı");
   }
 }
 
-function processVoiceCommand(transcript) {
-  const command = normalizeCommand(transcript);
-  const now = Date.now();
+function updateVolumeDisplay() {
+  const percent = Math.round(audioPlayer.volume * 100);
+  volumeValue.textContent = String(percent);
+  document.body.classList.toggle("is-muted", audioPlayer.muted);
 
-  lastCommand.textContent = transcript;
-
-  if (command === lastCommandText && now - lastCommandTime < COMMAND_COOLDOWN_MS) {
-    return;
+  if (!pcBridgeOnline || !pcBridgeVolumeLabel) {
+    pcVolumeState.textContent = audioPlayer.muted ? "Sessiz" : `%${percent}`;
   }
-
-  lastCommandText = command;
-  lastCommandTime = now;
-
-  if (command.includes("oynat") || command.includes("devam et")) {
-    playSong();
-    showNotification("Sesli komut: oynat");
-    return;
-  }
-
-  if (command.includes("duraklat") || command.includes("durdur")) {
-    pauseSong();
-    showNotification("Sesli komut: duraklat");
-    return;
-  }
-
-  if (command.includes("sonraki şarkı") || command.includes("sonraki")) {
-    nextSong();
-    showNotification("Sesli komut: sonraki şarkı");
-    return;
-  }
-
-  if (command.includes("önceki şarkı") || command.includes("önceki")) {
-    previousSong();
-    showNotification("Sesli komut: önceki şarkı");
-    return;
-  }
-
-  if (command.includes("ses aç") || command.includes("sesi aç") || command.includes("ses yükselt") || command.includes("sesi yükselt")) {
-    changeVolume(Number(volumeSlider.value) + 10);
-    showNotification("Ses yüzde 10 artırıldı");
-    return;
-  }
-
-  if (command.includes("ses kıs") || command.includes("sesi kıs")) {
-    changeVolume(Number(volumeSlider.value) - 10);
-    showNotification("Ses yüzde 10 azaltıldı");
-    return;
-  }
-
-  if (command.includes("sessiz")) {
-    changeVolume(0);
-    showNotification("Ses sıfırlandı");
-    return;
-  }
-
-  if (command.includes("başa sar")) {
-    audioPlayer.currentTime = 0;
-    updateProgress();
-    showNotification("Şarkı başa alındı");
-    return;
-  }
-
-  showNotification("Komut anlaşılamadı", true);
 }
 
 function showNotification(message, isError = false) {
@@ -293,101 +242,331 @@ function setPlayingState(playing) {
   playStatus.textContent = playing ? "Oynatılıyor" : "Duraklatıldı";
   playIcon.textContent = playing ? "⏸" : "▶";
   playButton.setAttribute("aria-label", playing ? "Duraklat" : "Oynat");
+
+  if ("mediaSession" in navigator) {
+    navigator.mediaSession.playbackState = playing ? "playing" : "paused";
+  }
 }
 
-function setupRecognition() {
-  recognition = new SpeechRecognition();
-  recognition.lang = "tr-TR";
-  recognition.continuous = true;
-  recognition.interimResults = false;
+function runTrackCommand(direction, message, useCooldown = false) {
+  const now = Date.now();
 
-  recognition.onstart = () => {
-    isRecognitionRunning = true;
-    setMicrophoneStatus("Dinleniyor", "listening");
+  if (useCooldown && direction === lastMediaCommand && now - lastMediaCommandTime < MEDIA_COMMAND_COOLDOWN_MS) {
+    return;
+  }
+
+  lastMediaCommand = direction;
+  lastMediaCommandTime = now;
+
+  if (direction === "next") {
+    nextSong();
+  } else {
+    previousSong();
+  }
+
+  showNotification(message);
+}
+
+function handleExternalTrackCommand(direction) {
+  const label = direction === "next" ? "sonraki şarkı" : "önceki şarkı";
+  runTrackCommand(direction, `Bilgisayar komutu: ${label}`, true);
+}
+
+function setupMediaSessionControls() {
+  if (!("mediaSession" in navigator)) {
+    return;
+  }
+
+  const actions = {
+    play: playSong,
+    pause: pauseSong,
+    nexttrack: () => handleExternalTrackCommand("next"),
+    previoustrack: () => handleExternalTrackCommand("previous")
   };
 
-  recognition.onresult = (event) => {
-    const result = event.results[event.results.length - 1];
-    if (result && result[0]) {
-      processVoiceCommand(result[0].transcript.trim());
+  Object.entries(actions).forEach(([action, handler]) => {
+    try {
+      navigator.mediaSession.setActionHandler(action, handler);
+    } catch (error) {
+      // Some browsers expose Media Session but do not support every action.
+    }
+  });
+}
+
+function updateMediaSessionMetadata() {
+  if (!("mediaSession" in navigator) || !("MediaMetadata" in window)) {
+    return;
+  }
+
+  const song = songs[currentSongIndex];
+  const cover = song.cover || DEFAULT_COVER;
+
+  navigator.mediaSession.metadata = new MediaMetadata({
+    title: song.title,
+    artist: song.artist,
+    artwork: [
+      { src: cover, sizes: "512x512", type: "image/svg+xml" }
+    ]
+  });
+}
+
+function executeLocalPcCommand(command, source = "panel") {
+  const sourceLabel = source === "serial" ? "ESP32" : "Panel";
+  const commandLabel = PC_COMMAND_LABELS[command] || command;
+
+  pcLastCommand.textContent = `${sourceLabel}: ${commandLabel}`;
+
+  if (!pcBridgeOnline) {
+    addPcLog(`${sourceLabel}: ${commandLabel}`);
+  }
+
+  if (command === "VOLUME_DOWN") {
+    changeVolume(LOW_VOLUME_PERCENT, { unmute: true });
+    setPcServiceMessage("Ses %20 seviyesine alındı");
+    showNotification(`${sourceLabel}: ses %20`);
+    return;
+  }
+
+  if (command === "VOLUME_UP") {
+    changeVolume(HIGH_VOLUME_PERCENT, { unmute: true });
+    setPcServiceMessage("Ses %100 seviyesine alındı");
+    showNotification(`${sourceLabel}: ses %100`);
+    return;
+  }
+
+  if (command === "MUTE") {
+    setAudioMuted(!audioPlayer.muted, { notify: false });
+    setPcServiceMessage(audioPlayer.muted ? "Ses kapatıldı" : "Ses açıldı");
+    showNotification(`${sourceLabel}: ${audioPlayer.muted ? "ses kapatıldı" : "ses açıldı"}`);
+    return;
+  }
+
+  if (command === "NEXT") {
+    runTrackCommand("next", `${sourceLabel}: sonraki şarkı`, source === "serial");
+    setPcServiceMessage("Sonraki şarkıya geçildi");
+    return;
+  }
+
+  if (command === "PREVIOUS") {
+    runTrackCommand("previous", `${sourceLabel}: önceki şarkı`, source === "serial");
+    setPcServiceMessage("Önceki şarkıya geçildi");
+  }
+}
+
+function setPcServiceMessage(message, isError = false) {
+  pcServiceMessage.textContent = message;
+  pcServiceMessage.classList.toggle("is-error", isError);
+}
+
+function getPcApiCandidates() {
+  const originBase = `${window.location.origin}/api/pc-control`;
+  return originBase === PC_CONTROL_FALLBACK_BASE ? [originBase] : [originBase, PC_CONTROL_FALLBACK_BASE];
+}
+
+async function requestPcApi(path, options = {}) {
+  const candidates = pcApiBase
+    ? [pcApiBase, ...getPcApiCandidates().filter((base) => base !== pcApiBase)]
+    : getPcApiCandidates();
+  const errors = [];
+
+  for (const base of candidates) {
+    const controller = new AbortController();
+    const timeout = window.setTimeout(() => controller.abort(), options.timeout ?? 1800);
+
+    try {
+      const response = await fetch(`${base}${path}`, {
+        ...options,
+        signal: controller.signal,
+        headers: {
+          "Content-Type": "application/json",
+          ...(options.headers || {})
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}`);
+      }
+
+      pcApiBase = base;
+      return response.json();
+    } catch (error) {
+      errors.push(error);
+    } finally {
+      window.clearTimeout(timeout);
+    }
+  }
+
+  throw errors[0] || new Error("PC kontrol servisine ulaşılamadı");
+}
+
+async function refreshPcBridgeStatus() {
+  try {
+    const status = await requestPcApi("/status", { method: "GET", timeout: 1300 });
+    renderPcStatus(status);
+    setupPcEvents();
+  } catch (error) {
+    setPcOffline();
+  }
+}
+
+function setupPcEvents() {
+  if (!pcApiBase || pcEvents || !("EventSource" in window)) {
+    return;
+  }
+
+  pcEvents = new EventSource(`${pcApiBase}/events`);
+  pcEvents.onmessage = (event) => {
+    try {
+      renderPcStatus(JSON.parse(event.data));
+    } catch (error) {
+      setPcServiceMessage("Durum verisi okunamadı", true);
     }
   };
-
-  recognition.onerror = (event) => {
-    isRecognitionRunning = false;
-
-    if (event.error === "not-allowed" || event.error === "service-not-allowed") {
-      isMicrophoneActive = false;
-      microphoneButton.setAttribute("aria-pressed", "false");
-      microphoneButton.setAttribute("aria-label", "Mikrofonu aç");
-      microphoneButtonText.textContent = "Mikrofonu Aç";
-      setMicrophoneStatus("Kapalı", "error");
-      showNotification("Mikrofon izni reddedildi. Tarayıcı ayarlarından izin verin.", true);
-      return;
-    }
-
-    if (event.error === "no-speech") {
-      showNotification("Ses algılanmadı, dinleme sürüyor.");
-    } else {
-      showNotification("Mikrofon dinlemesi geçici olarak durdu.", true);
-    }
-
-    scheduleRecognitionRestart();
-  };
-
-  recognition.onend = () => {
-    isRecognitionRunning = false;
-    scheduleRecognitionRestart();
+  pcEvents.onerror = () => {
+    pcEvents.close();
+    pcEvents = null;
   };
 }
 
-function safelyStartRecognition() {
-  if (!recognition || isRecognitionRunning) {
+function renderPcStatus(status) {
+  pcBridgeOnline = true;
+  pcSerialConnected = Boolean(status.serial_connected);
+  pcStatusBadge.textContent = pcSerialConnected ? "ESP32 bağlı" : "Servis açık";
+  pcStatusBadge.classList.toggle("is-connected", pcSerialConnected);
+  pcStatusBadge.classList.toggle("is-error", false);
+  pcConnectButton.disabled = false;
+  pcConnectButton.textContent = pcSerialConnected ? "Kes" : "Bağlan";
+
+  if (status.serial_port) {
+    pcPortInput.value = status.serial_port;
+  }
+
+  if (status.last_command) {
+    pcLastCommand.textContent = `${status.last_command_source === "serial" ? "ESP32" : "Panel"}: ${PC_COMMAND_LABELS[status.last_command] || status.last_command}`;
+  }
+
+  pcLastPrediction.textContent = formatPrediction(status.last_prediction);
+  pcBridgeVolumeLabel = formatPcVolume(status);
+  pcVolumeState.textContent = pcBridgeVolumeLabel;
+  setPcServiceMessage(status.last_message || "Servis hazır", Boolean(status.error));
+  renderPcLog(status.log || []);
+  syncSerialCommandToPlayer(status);
+}
+
+function setPcOffline() {
+  pcBridgeOnline = false;
+  pcSerialConnected = false;
+  pcBridgeVolumeLabel = "";
+  pcStatusBadge.textContent = "Servis kapalı";
+  pcStatusBadge.classList.remove("is-connected");
+  pcStatusBadge.classList.add("is-error");
+  pcConnectButton.disabled = false;
+  pcConnectButton.textContent = "Bağlan";
+  setPcServiceMessage("Yerel servis kapalı", true);
+  updateVolumeDisplay();
+}
+
+function formatPrediction(prediction) {
+  if (!prediction || !prediction.label) {
+    return "Bekleniyor";
+  }
+
+  return `${prediction.label} %${Number(prediction.score || 0).toFixed(1)}`;
+}
+
+function formatPcVolume(status) {
+  if (typeof status.volume_percent !== "number") {
+    return audioPlayer.muted ? "Sessiz" : `%${Math.round(audioPlayer.volume * 100)}`;
+  }
+
+  return status.muted ? "PC sessiz" : `PC %${status.volume_percent}`;
+}
+
+function syncSerialCommandToPlayer(status) {
+  const eventId = Number(status.command_event_id || 0);
+
+  if (!hasReceivedPcStatus) {
+    hasReceivedPcStatus = true;
+    lastProcessedPcCommandEvent = eventId;
+    return;
+  }
+
+  if (!eventId || eventId === lastProcessedPcCommandEvent || status.last_command_source !== "serial") {
+    return;
+  }
+
+  lastProcessedPcCommandEvent = eventId;
+  executeLocalPcCommand(status.last_command, "serial");
+}
+
+async function handlePcConnectClick() {
+  if (!pcBridgeOnline) {
+    setPcServiceMessage("Önce pc_control_server.py çalıştırılmalı", true);
+    refreshPcBridgeStatus();
     return;
   }
 
   try {
-    recognition.start();
+    const path = pcSerialConnected ? "/disconnect" : "/connect";
+    const body = pcSerialConnected
+      ? {}
+      : {
+          port: pcPortInput.value.trim() || DEFAULT_PC_PORT,
+          baud_rate: DEFAULT_PC_BAUD_RATE
+        };
+    const status = await requestPcApi(path, {
+      method: "POST",
+      body: JSON.stringify(body),
+      timeout: 3500
+    });
+    renderPcStatus(status);
   } catch (error) {
-    scheduleRecognitionRestart();
+    setPcServiceMessage("Bağlantı işlemi başarısız", true);
   }
 }
 
-function scheduleRecognitionRestart() {
-  window.clearTimeout(restartTimer);
-
-  if (!isMicrophoneActive) {
+async function sendPcCommand(command) {
+  if (!pcBridgeOnline) {
+    executeLocalPcCommand(command, "panel");
     return;
   }
 
-  restartTimer = window.setTimeout(() => {
-    safelyStartRecognition();
-  }, 550);
-}
-
-function setMicrophoneStatus(text, state) {
-  microphoneStatus.textContent = text;
-  microphoneStatus.classList.remove("is-listening", "is-unsupported", "is-error");
-
-  if (state === "listening") {
-    microphoneStatus.classList.add("is-listening");
-  }
-
-  if (state === "unsupported") {
-    microphoneStatus.classList.add("is-unsupported");
-  }
-
-  if (state === "error") {
-    microphoneStatus.classList.add("is-error");
+  try {
+    const status = await requestPcApi("/command", {
+      method: "POST",
+      body: JSON.stringify({ command }),
+      timeout: 2500
+    });
+    executeLocalPcCommand(command, "panel");
+    renderPcStatus(status);
+  } catch (error) {
+    setPcServiceMessage("PC servisine komut gönderilemedi", true);
+    executeLocalPcCommand(command, "panel");
   }
 }
 
-function normalizeCommand(transcript) {
-  return transcript
-    .toLocaleLowerCase("tr-TR")
-    .replace(/[.,!?;:]/g, "")
-    .replace(/\s+/g, " ")
-    .trim();
+function addPcLog(message) {
+  pcLocalLog = [message, ...pcLocalLog].slice(0, 6);
+  renderPcLog(pcLocalLog);
+}
+
+function renderPcLog(lines) {
+  pcLog.innerHTML = "";
+
+  if (!lines.length) {
+    const empty = document.createElement("span");
+    empty.className = "pc-log-line";
+    empty.textContent = "Kayıt yok";
+    pcLog.appendChild(empty);
+    return;
+  }
+
+  lines.slice(0, 6).forEach((line) => {
+    const item = document.createElement("span");
+    item.className = "pc-log-line";
+    item.textContent = line;
+    pcLog.appendChild(item);
+  });
 }
 
 function formatTime(value) {
@@ -455,6 +634,18 @@ function seekBy(seconds) {
 }
 
 function handleKeyboardControls(event) {
+  if (event.key === "MediaTrackNext") {
+    event.preventDefault();
+    handleExternalTrackCommand("next");
+    return;
+  }
+
+  if (event.key === "MediaTrackPrevious") {
+    event.preventDefault();
+    handleExternalTrackCommand("previous");
+    return;
+  }
+
   const interactiveTags = ["BUTTON", "INPUT", "TEXTAREA", "SELECT"];
   if (interactiveTags.includes(event.target.tagName)) {
     return;
@@ -477,13 +668,13 @@ function handleKeyboardControls(event) {
 
   if (event.key === "ArrowUp") {
     event.preventDefault();
-    changeVolume(Number(volumeSlider.value) + 10);
+    changeVolume(Number(volumeSlider.value) + 10, { unmute: true });
     showNotification("Ses artırıldı");
   }
 
   if (event.key === "ArrowDown") {
     event.preventDefault();
-    changeVolume(Number(volumeSlider.value) - 10);
+    changeVolume(Number(volumeSlider.value) - 10, { unmute: true });
     showNotification("Ses azaltıldı");
   }
 }
@@ -492,21 +683,18 @@ previousButton.addEventListener("click", previousSong);
 playButton.addEventListener("click", togglePlay);
 nextButton.addEventListener("click", nextSong);
 volumeDownButton.addEventListener("click", () => {
-  changeVolume(Number(volumeSlider.value) - 10);
+  changeVolume(Number(volumeSlider.value) - 10, { unmute: true });
   showNotification("Ses azaltıldı");
 });
 volumeUpButton.addEventListener("click", () => {
-  changeVolume(Number(volumeSlider.value) + 10);
+  changeVolume(Number(volumeSlider.value) + 10, { unmute: true });
   showNotification("Ses artırıldı");
 });
 volumeSlider.addEventListener("input", (event) => changeVolume(event.target.value));
 progressBar.addEventListener("click", setProgress);
-microphoneButton.addEventListener("click", () => {
-  if (isMicrophoneActive) {
-    stopVoiceRecognition();
-  } else {
-    startVoiceRecognition();
-  }
+pcConnectButton.addEventListener("click", handlePcConnectClick);
+pcCommandButtons.forEach((button) => {
+  button.addEventListener("click", () => sendPcCommand(button.dataset.pcCommand));
 });
 
 audioPlayer.addEventListener("timeupdate", updateProgress);
@@ -514,6 +702,7 @@ audioPlayer.addEventListener("loadedmetadata", updateProgress);
 audioPlayer.addEventListener("ended", handleSongEnded);
 audioPlayer.addEventListener("pause", () => setPlayingState(false));
 audioPlayer.addEventListener("play", () => setPlayingState(true));
+audioPlayer.addEventListener("volumechange", updateVolumeDisplay);
 audioPlayer.addEventListener("error", () => {
   setPlayingState(false);
   showNotification(`${songs[currentSongIndex].src} yüklenemedi. MP3 dosyasını kontrol edin.`, true);
@@ -527,12 +716,14 @@ coverImage.addEventListener("error", () => {
 
 document.addEventListener("keydown", handleKeyboardControls);
 
+window.musicHubControl = {
+  next: () => handleExternalTrackCommand("next"),
+  previous: () => handleExternalTrackCommand("previous")
+};
+
+setupMediaSessionControls();
 changeVolume(getStoredVolume());
 loadSong(currentSongIndex);
-
-if (!SpeechRecognition) {
-  microphoneButton.disabled = true;
-  microphoneButton.setAttribute("aria-label", "Mikrofon desteklenmiyor");
-  microphoneButtonText.textContent = "Desteklenmiyor";
-  setMicrophoneStatus("Desteklenmiyor", "unsupported");
-}
+renderPcLog([]);
+refreshPcBridgeStatus();
+pcStatusTimer = window.setInterval(refreshPcBridgeStatus, 3500);
