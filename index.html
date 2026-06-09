@@ -8,71 +8,58 @@
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="0">
   <title>Müzik Kontrol Sistemi</title>
-  <link rel="stylesheet" href="style.css?v=layout-lock-v1">
+  <link rel="stylesheet" href="style.css?v=player-fit-v3">
 </head>
 <body>
   <main class="app-shell">
     <section class="player-panel" aria-labelledby="appTitle">
-      <div class="hero-copy">
-        <p class="eyebrow">Adaptif Araç Ses Sistemi</p>
-        <h1 id="appTitle"><span>Müzik</span><span>Kontrol Sistemi</span></h1>
-      </div>
+      <h1 id="appTitle" class="sr-only">Adaptif Araç Ses Sistemi</h1>
 
       <div class="player-layout">
-        <div class="cover-area">
-          <img id="coverImage" class="cover-image" src="assets/images/default-cover.svg" alt="Albüm kapağı">
-          <div id="waveform" class="waveform" aria-hidden="true">
-            <span></span>
-            <span></span>
-            <span></span>
-            <span></span>
-            <span></span>
-          </div>
+        <div class="track-meta">
+          <p id="songTitle" class="song-title">Şarkı yükleniyor</p>
+          <p id="artistName" class="artist-name">Sanatçı</p>
+          <p id="notificationArea" class="notification-area" aria-live="polite">Hazır</p>
         </div>
 
-        <div class="player-details">
-          <div class="track-meta">
-            <p id="songTitle" class="song-title">Şarkı yükleniyor</p>
-            <p id="artistName" class="artist-name">Sanatçı</p>
-            <p id="playStatus" class="status-pill" aria-live="polite">Duraklatıldı</p>
-            <p id="notificationArea" class="notification-area" aria-live="polite">Hazır</p>
-          </div>
+        <div class="cover-area">
+          <img id="coverImage" class="cover-image" src="assets/images/MaviPlak.png?v=cover-plak-v1" alt="Albüm kapağı">
+        </div>
 
-          <div class="progress-block">
-            <div class="time-row">
-              <span id="currentTime">0:00</span>
-              <span id="durationTime">0:00</span>
-            </div>
-            <button id="progressBar" class="progress-bar" type="button" aria-label="Şarkı ilerleme çubuğu">
-              <span id="progressFill" class="progress-fill"></span>
-            </button>
+        <div class="progress-block">
+          <div class="time-row">
+            <span id="currentTime">0:00</span>
+            <span id="durationTime">0:00</span>
           </div>
+          <button id="progressBar" class="progress-bar" type="button" aria-label="Şarkı ilerleme çubuğu">
+            <span id="progressFill" class="progress-fill"></span>
+          </button>
+        </div>
 
-          <div class="controls" aria-label="Müzik kontrolleri">
-            <button id="previousButton" class="icon-button" type="button" aria-label="Önceki şarkı">
-              <span aria-hidden="true">⏮</span>
-            </button>
-            <button id="playButton" class="play-button" type="button" aria-label="Oynat">
-              <span id="playIcon" aria-hidden="true">▶</span>
-            </button>
-            <button id="nextButton" class="icon-button" type="button" aria-label="Sonraki şarkı">
-              <span aria-hidden="true">⏭</span>
-            </button>
-          </div>
+        <div class="controls" aria-label="Müzik kontrolleri">
+          <button id="previousButton" class="icon-button" type="button" aria-label="Önceki şarkı">
+            <span aria-hidden="true">⏮</span>
+          </button>
+          <button id="playButton" class="play-button" type="button" aria-label="Oynat">
+            <span id="playIcon" aria-hidden="true">▶</span>
+          </button>
+          <button id="nextButton" class="icon-button" type="button" aria-label="Sonraki şarkı">
+            <span aria-hidden="true">⏭</span>
+          </button>
+        </div>
 
-          <div class="volume-row">
-            <button id="volumeDownButton" class="icon-button small" type="button" aria-label="Sesi azalt">
-              <span aria-hidden="true">−</span>
-            </button>
-            <label class="volume-label" for="volumeSlider">
-              <span>Ses</span>
-              <strong id="volumeValue">70</strong>
-            </label>
-            <input id="volumeSlider" class="volume-slider" type="range" min="0" max="100" value="70" aria-label="Ses seviyesi">
-            <button id="volumeUpButton" class="icon-button small" type="button" aria-label="Sesi artır">
-              <span aria-hidden="true">+</span>
-            </button>
-          </div>
+        <div class="volume-row">
+          <label class="volume-label" for="volumeSlider">
+            <span>Ses</span>
+            <strong id="volumeValue">70</strong>
+          </label>
+          <button id="volumeDownButton" class="icon-button small" type="button" aria-label="Sesi azalt">
+            <span aria-hidden="true">−</span>
+          </button>
+          <input id="volumeSlider" class="volume-slider" type="range" min="0" max="100" value="70" aria-label="Ses seviyesi">
+          <button id="volumeUpButton" class="icon-button small" type="button" aria-label="Sesi artır">
+            <span aria-hidden="true">+</span>
+          </button>
         </div>
       </div>
     </section>
@@ -81,6 +68,11 @@
       <section class="playlist-section" aria-labelledby="playlistTitle">
         <div class="section-heading">
           <h2 id="playlistTitle">Şarkı Listesi</h2>
+          <label class="theme-switch" for="themeToggle">
+            <span>Açık tema</span>
+            <input id="themeToggle" type="checkbox" aria-label="Açık tema">
+            <span class="theme-switch-track" aria-hidden="true"></span>
+          </label>
         </div>
         <ul id="songList" class="song-list"></ul>
       </section>
@@ -97,29 +89,6 @@
             <input id="pcPortInput" type="text" value="COM12" autocomplete="off">
           </label>
           <button id="pcConnectButton" class="control-button" type="button">Bağlan</button>
-        </div>
-
-        <div class="pc-command-grid" aria-label="PC komutları">
-          <button class="pc-command-button" type="button" data-pc-command="VOLUME_DOWN" aria-label="Sesi yüzde 20 yap">
-            <span aria-hidden="true">−</span>
-            <small>%20</small>
-          </button>
-          <button class="pc-command-button" type="button" data-pc-command="VOLUME_UP" aria-label="Sesi yüzde 100 yap">
-            <span aria-hidden="true">+</span>
-            <small>%100</small>
-          </button>
-          <button class="pc-command-button" type="button" data-pc-command="MUTE" aria-label="Sessize al veya sesi aç">
-            <span aria-hidden="true">M</span>
-            <small>Sessiz</small>
-          </button>
-          <button class="pc-command-button" type="button" data-pc-command="PREVIOUS" aria-label="Önceki şarkı">
-            <span aria-hidden="true">⏮</span>
-            <small>Önceki</small>
-          </button>
-          <button class="pc-command-button" type="button" data-pc-command="NEXT" aria-label="Sonraki şarkı">
-            <span aria-hidden="true">⏭</span>
-            <small>Sonraki</small>
-          </button>
         </div>
 
         <dl class="pc-readout">

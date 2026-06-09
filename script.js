@@ -3,28 +3,29 @@ const songs = [
     title: "First Love (SlowVerb)",
     artist: "Jurrivh",
     src: "assets/music/song1.mp3",
-    cover: "assets/images/default-cover.svg"
+    cover: "assets/images/MaviPlak.png?v=cover-plak-v1"
   },
   {
     title: "Nothing Else Matters (Instrumental Version)",
     artist: "Metallica",
     src: "assets/music/Metallica - Nothing Else Matters (Instrumental Version) [qYkClrLauNs].m4a",
-    cover: "assets/images/default-cover.svg"
+    cover: "assets/images/KırmızıPlak.png?v=cover-plak-v1"
   },
   {
     title: "See You Again",
     artist: "Sad & Emotional Piano Instrumental",
     src: "assets/music/song3.mp3",
-    cover: "assets/images/default-cover.svg"
+    cover: "assets/images/YesilPlak.png?v=cover-plak-v1"
   }
 ];
 
 const STORAGE_KEYS = {
   selectedSong: "musicPlayer:selectedSong",
-  volume: "musicPlayer:volume"
+  volume: "musicPlayer:volume",
+  theme: "musicPlayer:theme"
 };
 
-const DEFAULT_COVER = "assets/images/default-cover.svg";
+const DEFAULT_COVER = "assets/images/MaviPlak.png?v=cover-plak-v1";
 const ASSET_VERSION = "audio-cache-v6";
 const MEDIA_COMMAND_COOLDOWN_MS = 900;
 const LOW_VOLUME_PERCENT = 20;
@@ -45,7 +46,6 @@ const audioPlayer = document.getElementById("audioPlayer");
 const coverImage = document.getElementById("coverImage");
 const songTitle = document.getElementById("songTitle");
 const artistName = document.getElementById("artistName");
-const playStatus = document.getElementById("playStatus");
 const currentTimeLabel = document.getElementById("currentTime");
 const durationTimeLabel = document.getElementById("durationTime");
 const progressBar = document.getElementById("progressBar");
@@ -59,11 +59,11 @@ const volumeUpButton = document.getElementById("volumeUpButton");
 const volumeSlider = document.getElementById("volumeSlider");
 const volumeValue = document.getElementById("volumeValue");
 const songList = document.getElementById("songList");
+const themeToggle = document.getElementById("themeToggle");
 const notificationArea = document.getElementById("notificationArea");
 const pcStatusBadge = document.getElementById("pcStatusBadge");
 const pcPortInput = document.getElementById("pcPortInput");
 const pcConnectButton = document.getElementById("pcConnectButton");
-const pcCommandButtons = document.querySelectorAll("[data-pc-command]");
 const pcLastCommand = document.getElementById("pcLastCommand");
 const pcLastPrediction = document.getElementById("pcLastPrediction");
 const pcVolumeState = document.getElementById("pcVolumeState");
@@ -95,6 +95,17 @@ function getStoredVolume() {
   return Number.isInteger(storedVolume) && storedVolume >= 0 && storedVolume <= 100 ? storedVolume : 70;
 }
 
+function getStoredTheme() {
+  return localStorage.getItem(STORAGE_KEYS.theme) === "light" ? "light" : "dark";
+}
+
+function applyTheme(theme) {
+  const nextTheme = theme === "light" ? "light" : "dark";
+  document.documentElement.dataset.theme = nextTheme;
+  themeToggle.checked = nextTheme === "light";
+  localStorage.setItem(STORAGE_KEYS.theme, nextTheme);
+}
+
 function loadSong(index) {
   currentSongIndex = (index + songs.length) % songs.length;
   const song = songs[currentSongIndex];
@@ -121,7 +132,6 @@ function playSong() {
     playPromise
       .then(() => {
         setPlayingState(true);
-        showNotification(`${songs[currentSongIndex].title} oynatılıyor`);
       })
       .catch(() => {
         setPlayingState(false);
@@ -133,7 +143,6 @@ function playSong() {
 function pauseSong() {
   audioPlayer.pause();
   setPlayingState(false);
-  showNotification("Müzik duraklatıldı");
 }
 
 function togglePlay() {
@@ -218,6 +227,7 @@ function setAudioMuted(muted, options = {}) {
 function updateVolumeDisplay() {
   const percent = Math.round(audioPlayer.volume * 100);
   volumeValue.textContent = String(percent);
+  volumeSlider.style.setProperty("--volume-percent", `${percent}%`);
   document.body.classList.toggle("is-muted", audioPlayer.muted);
 
   if (!pcBridgeOnline || !pcBridgeVolumeLabel) {
@@ -239,7 +249,6 @@ function showNotification(message, isError = false) {
 function setPlayingState(playing) {
   isPlaying = playing;
   document.body.classList.toggle("is-playing", playing);
-  playStatus.textContent = playing ? "Oynatılıyor" : "Duraklatıldı";
   playIcon.textContent = playing ? "⏸" : "▶";
   playButton.setAttribute("aria-label", playing ? "Duraklat" : "Oynat");
 
@@ -525,26 +534,6 @@ async function handlePcConnectClick() {
   }
 }
 
-async function sendPcCommand(command) {
-  if (!pcBridgeOnline) {
-    executeLocalPcCommand(command, "panel");
-    return;
-  }
-
-  try {
-    const status = await requestPcApi("/command", {
-      method: "POST",
-      body: JSON.stringify({ command }),
-      timeout: 2500
-    });
-    executeLocalPcCommand(command, "panel");
-    renderPcStatus(status);
-  } catch (error) {
-    setPcServiceMessage("PC servisine komut gönderilemedi", true);
-    executeLocalPcCommand(command, "panel");
-  }
-}
-
 function addPcLog(message) {
   pcLocalLog = [message, ...pcLocalLog].slice(0, 6);
   renderPcLog(pcLocalLog);
@@ -693,8 +682,8 @@ volumeUpButton.addEventListener("click", () => {
 volumeSlider.addEventListener("input", (event) => changeVolume(event.target.value));
 progressBar.addEventListener("click", setProgress);
 pcConnectButton.addEventListener("click", handlePcConnectClick);
-pcCommandButtons.forEach((button) => {
-  button.addEventListener("click", () => sendPcCommand(button.dataset.pcCommand));
+themeToggle.addEventListener("change", () => {
+  applyTheme(themeToggle.checked ? "light" : "dark");
 });
 
 audioPlayer.addEventListener("timeupdate", updateProgress);
@@ -722,6 +711,7 @@ window.musicHubControl = {
 };
 
 setupMediaSessionControls();
+applyTheme(getStoredTheme());
 changeVolume(getStoredVolume());
 loadSong(currentSongIndex);
 renderPcLog([]);
