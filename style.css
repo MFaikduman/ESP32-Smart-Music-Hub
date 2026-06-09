@@ -191,19 +191,31 @@ h2 {
 .track-meta {
   display: grid;
   gap: 8px;
+  align-content: start;
+  min-height: 188px;
 }
 
 .song-title {
+  min-height: calc(2 * 1.05em);
+  display: -webkit-box;
+  overflow: hidden;
   overflow-wrap: anywhere;
   font-size: clamp(1.65rem, 4vw, 3rem);
   font-weight: 800;
   line-height: 1.05;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
 }
 
 .artist-name {
+  min-height: 1.35em;
+  overflow: hidden;
   overflow-wrap: anywhere;
   color: var(--muted);
   font-size: 1.04rem;
+  line-height: 1.35;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .status-pill {
@@ -221,10 +233,15 @@ h2 {
 }
 
 .notification-area {
-  min-height: 24px;
+  min-height: 44px;
+  display: -webkit-box;
+  overflow: hidden;
   color: var(--muted);
   font-size: 0.92rem;
+  line-height: 1.35;
   overflow-wrap: anywhere;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
 }
 
 .notification-area.is-error {
@@ -388,12 +405,13 @@ h2 {
 
 .song-list button {
   width: 100%;
-  min-height: 64px;
+  height: 64px;
   display: grid;
   grid-template-columns: 36px minmax(0, 1fr);
   gap: 12px;
   align-items: center;
   padding: 10px;
+  overflow: hidden;
   border: 1px solid var(--line);
   border-radius: var(--radius);
   color: var(--text);
@@ -427,6 +445,10 @@ h2 {
 
 .song-list button.is-active .track-number {
   background: var(--accent);
+}
+
+.song-list button > span:not(.track-number) {
+  min-width: 0;
 }
 
 .list-title,

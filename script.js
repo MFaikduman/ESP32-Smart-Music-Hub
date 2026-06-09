@@ -6,9 +6,9 @@ const songs = [
     cover: "assets/images/default-cover.svg"
   },
   {
-    title: "Ascensus Christi: A Piano Rhapsody",
-    artist: "Paul Cardall",
-    src: "assets/music/song2.mp3",
+    title: "Nothing Else Matters (Instrumental Version)",
+    artist: "Metallica",
+    src: "assets/music/Metallica - Nothing Else Matters (Instrumental Version) [qYkClrLauNs].m4a",
     cover: "assets/images/default-cover.svg"
   },
   {
@@ -25,7 +25,7 @@ const STORAGE_KEYS = {
 };
 
 const DEFAULT_COVER = "assets/images/default-cover.svg";
-const ASSET_VERSION = "audio-cache-v5";
+const ASSET_VERSION = "audio-cache-v6";
 const MEDIA_COMMAND_COOLDOWN_MS = 900;
 const LOW_VOLUME_PERCENT = 20;
 const HIGH_VOLUME_PERCENT = 100;
@@ -705,7 +705,7 @@ audioPlayer.addEventListener("play", () => setPlayingState(true));
 audioPlayer.addEventListener("volumechange", updateVolumeDisplay);
 audioPlayer.addEventListener("error", () => {
   setPlayingState(false);
-  showNotification(`${songs[currentSongIndex].src} yüklenemedi. MP3 dosyasını kontrol edin.`, true);
+  showNotification(`${songs[currentSongIndex].src} yüklenemedi. Ses dosyasını kontrol edin.`, true);
 });
 
 coverImage.addEventListener("error", () => {
