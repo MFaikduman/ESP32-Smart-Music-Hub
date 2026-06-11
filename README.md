@@ -1,68 +1,139 @@
-# Adaptif Araç Ses Sistemi
+# Adaptif Arac Ses Sistemi
 
-Bu proje, ESP32 tabanlı ses/komut algılama devresi ile kontrol edilen web tabanlı bir müzik çalar arayüzüdür. ESP32 seri port üzerinden komut gönderir; bilgisayardaki Python kontrol servisi bu komutları okuyup Windows ses seviyesini ve web müzik çaları yönetir.
+ESP32-S3, INMP441 I2S mikrofon ve Edge Impulse ses modeli ile calisan akilli muzik kontrol projesi. ESP32 sesli komutlari algilar, seri porttan komut gonderir; bilgisayarda calisan Python kontrol servisi de Windows ses seviyesini ve web muzik calar arayuzunu yonetir.
 
-## Devre Fotoğrafları
+## Neler Var?
+
+- ESP32-S3 icin Arduino firmware dosyasi: `firmware/ESP32SmartMusicHub/ESP32SmartMusicHub.ino`
+- Edge Impulse Arduino kutuphanesi/model arsivi: `libraries/esp32_voice_control_inferencing.zip`
+- Yerel web muzik calar: `index.html`, `style.css`, `script.js`
+- Windows ses ve medya kontrol servisi: `pc_control_server.py`
+- Basit seri port komut dinleyici: `pc_voice_control.py`
+- Devre fotograflari ve muzik dosyalari: `assets/`
+
+## Devre Fotograflari
 
 Genel breadboard kurulumu:
 
 ![ESP32 breadboard devresi](assets/images/Devre1.jpeg)
 
-ESP32 ve bağlantı kablolarının yakın planı:
+ESP32 ve baglanti kablolarinin yakin plani:
 
-![ESP32 yakın plan devre bağlantıları](assets/images/Devre2.jpeg)
+![ESP32 yakin plan devre baglantilari](assets/images/Devre2.jpeg)
 
-## Devredeki Parçalar
+## Donanim
 
-* ESP32-S3 geliştirme kartı
-* Breadboard
-* Ses algılama / mikrofon modülü
-* Potansiyometre veya rotary encoder olarak kullanılan kontrol parçası
-* Basma butonu
-* Jumper kablolar
-* USB kablosu
+- ESP32-S3 gelistirme karti
+- INMP441 I2S mikrofon modulu
+- Basma butonu
+- Breadboard
+- Jumper kablolar
+- USB kablosu
 
-ESP32, devreden gelen girişleri okuyup seri porta komut metni yazar. Bilgisayarda çalışan Python servisi de bu komutları yakalayarak ses seviyesini, sessize alma durumunu ve şarkı geçişlerini uygular.
+## ESP32 Pinleri
 
-> Not: ESP32 firmware dosyası bu repoda bulunmadığı için kesin GPIO pin numaraları README içinde uydurulmadı. Pin eşleşmeleri ESP32 kodundaki tanımlarla kontrol edilmelidir.
+Firmware icindeki varsayilan pin eslesmeleri:
 
-## Port ve Bağlantı Ayarları
-
-| Ayar | Değer |
+| Gorev | ESP32-S3 pini |
 | --- | --- |
-| Varsayılan seri port | `COM12` |
+| I2S BCLK | GPIO14 |
+| I2S WS / LRCLK | GPIO15 |
+| I2S DIN | GPIO16 |
+| Buton | GPIO4 |
+| Dahili RGB LED | GPIO48 |
+
+Not: Dahili RGB LED pini ESP32-S3 kart modeline gore degisebilir. LED yanmazsa `RGB_LED_PIN` degeri kartiniza gore guncellenmelidir.
+
+## Sesli Komutlar
+
+ESP32 firmware'i Edge Impulse modelinden gelen sinifi guven filtresinden gecirir ve seri porta asagidaki komutlari yazar:
+
+| Model etiketi | Seri komut | Etki |
+| --- | --- | --- |
+| `sesi_dusur` | `VOLUME_DOWN` | Sesi `%20` seviyesine alir |
+| `sesi_yukselt` | `VOLUME_UP` | Sesi `%100` seviyesine alir |
+| `sesi_kapat` | `MUTE` | Sesi kapatir veya tekrar acar |
+| `sonraki_muzik` | `NEXT` | Sonraki sarkiya gecer |
+| `ortam` | - | Komut disi ortam sesi, islem yapilmaz |
+| `diger_konusma` | - | Komut disi konusma, islem yapilmaz |
+
+PC kontrol servisi ayrica panel uzerinden `PREVIOUS` komutunu da destekler.
+
+## Firmware Ozeti
+
+`ESP32SmartMusicHub.ino` su akisi izler:
+
+1. INMP441 mikrofonu I2S uzerinden baslatir.
+2. Edge Impulse modelinin bekledigi uzunlukta ses ornegi toplar.
+3. `run_classifier` ile ses siniflandirmasi yapar.
+4. Dusuk guvenli veya kararsiz tahminleri filtreler.
+5. Gecerli komutu seri porttan gonderir.
+6. Butona 2 saniye basili tutuldugunda mikrofonu acar/kapatir.
+7. RGB LED ile sistem durumunu gosterir.
+
+Varsayilan seri haberlesme hizi `115200` baud'dur.
+
+## Arduino Kurulumu
+
+1. Arduino IDE icinde ESP32 kart destegini kurun.
+2. `libraries/esp32_voice_control_inferencing.zip` dosyasini Arduino IDE uzerinden ekleyin:
+
+```text
+Sketch -> Include Library -> Add .ZIP Library...
+```
+
+3. `firmware/ESP32SmartMusicHub/ESP32SmartMusicHub.ino` dosyasini acin.
+4. Kart olarak kullandiginiz ESP32-S3 modelini secin.
+5. Gerekirse pinleri kartiniza gore duzenleyin.
+6. Firmware'i ESP32-S3'e yukleyin.
+
+## PC Kontrol Servisi
+
+Gerekli Python paketleri:
+
+```bash
+pip install pyserial pycaw comtypes
+```
+
+Servisi baslatmak icin:
+
+```bash
+python pc_control_server.py --serial-port COM12
+```
+
+Ardindan tarayicida acin:
+
+```text
+http://127.0.0.1:8765
+```
+
+ESP32 farkli bir portta gorunuyorsa `COM12` yerine kendi portunuzu yazin. Arduino IDE Serial Monitor aciksa Python servisi seri porta baglanamayabilir; servis calisirken Serial Monitor kapali olmalidir.
+
+## Port ve API Ayarlari
+
+| Ayar | Deger |
+| --- | --- |
+| Varsayilan seri port | `COM12` |
 | Baud rate | `115200` |
 | Yerel PC kontrol adresi | `http://127.0.0.1:8765` |
-| Web arayüzü PC API yolu | `/api/pc-control` |
+| Web arayuzu PC API yolu | `/api/pc-control` |
 
-ESP32 hangi COM portunda görünüyorsa `COM12` yerine o port yazılmalıdır. Arduino IDE Serial Monitor açıksa Python servisi porta bağlanamayabilir; bu yüzden servis çalıştırılırken Serial Monitor kapalı olmalıdır.
+Kontrol paneli ESP32 baglanti durumunu, son seri komutu, AI tahminini, PC ses durumunu ve servis loglarini gosterir.
 
-## Pot / Encoder ve Buton Mantığı
+## Web Muzik Calar
 
-Devredeki pot/encoder ve buton, ESP32 tarafında kullanıcı girdisi üretir. ESP32 bu girdileri aşağıdaki komut isimlerinden birine çevirip seri porttan gönderir:
+Web arayuzu su ozellikleri icerir:
 
-| Komut | Etki |
-| --- | --- |
-| `VOLUME_DOWN` | Sesi düşük seviyeye alır, bu projede `%20` |
-| `VOLUME_UP` | Sesi yüksek seviyeye alır, bu projede `%100` |
-| `MUTE` | Sesi kapatır veya tekrar açar |
-| `NEXT` | Sonraki şarkıya geçer |
-| `PREVIOUS` | Önceki şarkıya geçer |
+- Muzik oynatma ve duraklatma
+- Onceki / sonraki sarkiya gecme
+- Ses seviyesini ayarlama
+- ESP32 seri port komutlarini web arayuzuyle esitleme
+- Windows sesini Python servisiyle kontrol etme
+- PC kontrol paneli
+- Koyu / acik tema destegi
+- GitHub Pages uzerinden statik yayinlama
 
-Web arayüzündeki ses çubuğu kullanıcı tarafından elle de kontrol edilebilir. ESP32'den gelen komutlar ise aynı arayüzü ve Windows sesini birlikte günceller.
-
-## Özellikler
-
-* Müzik oynatma ve duraklatma
-* Önceki / sonraki şarkıya geçme
-* Ses seviyesini ayarlama
-* ESP32 seri port komutlarını PC üzerinden dinleme
-* Windows sesini Python servisiyle kontrol etme
-* PC kontrol panelinde son komut, AI tahmini ve ses durumunu gösterme
-* Koyu / açık tema desteği
-* GitHub Pages üzerinden statik yayınlama
-
-## Proje Yapısı
+## Proje Yapisi
 
 ```text
 /
@@ -72,6 +143,11 @@ Web arayüzündeki ses çubuğu kullanıcı tarafından elle de kontrol edilebil
 |-- pc_control_server.py
 |-- pc_voice_control.py
 |-- README.md
+|-- firmware/
+|   `-- ESP32SmartMusicHub/
+|       `-- ESP32SmartMusicHub.ino
+|-- libraries/
+|   `-- esp32_voice_control_inferencing.zip
 `-- assets/
     |-- music/
     |   |-- song1.mp3
@@ -86,49 +162,27 @@ Web arayüzündeki ses çubuğu kullanıcı tarafından elle de kontrol edilebil
         `-- default-cover.svg
 ```
 
-## Çalıştırma
+## Muzik Ekleme
 
-Gerekli Python kütüphaneleri:
-
-```bash
-pip install pyserial pycaw comtypes
-```
-
-PC kontrol servisini başlatmak için:
-
-```bash
-python pc_control_server.py --serial-port COM12
-```
-
-Daha sonra tarayıcıda şu adres açılır:
-
-```text
-http://127.0.0.1:8765
-```
-
-Servis açıldığında web arayüzündeki PC Kontrol paneli ESP32 bağlantısını, son seri komutu, AI tahminini ve PC ses durumunu göstermeye başlar.
-
-## Müzik Ekleme
-
-Yeni ses dosyalarını `assets/music` klasörüne ekleyip `script.js` içindeki `songs` listesini güncelleyin:
+Yeni ses dosyalarini `assets/music` klasorune ekleyip `script.js` icindeki `songs` listesini guncelleyin:
 
 ```javascript
 const songs = [
   {
-    title: "Şarkı Adı",
-    artist: "Sanatçı Adı",
+    title: "Sarki Adi",
+    artist: "Sanatci Adi",
     src: "assets/music/song1.mp3",
     cover: "assets/images/MaviPlak.png"
   }
 ];
 ```
 
-## GitHub Pages Yayını
+## GitHub Pages Yayini
 
-GitHub Pages için:
+GitHub Pages icin:
 
 ```text
 Settings -> Pages -> Deploy from a branch
 ```
 
-Ardından `main` branch ve `/root` klasörü seçilir.
+Ardindan `main` branch ve `/root` klasoru secilir.
